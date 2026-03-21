@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>口算小冒险</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="sky"></div>
+  <div class="stars"></div>
+  <div class="hills hills-back"></div>
+  <div class="hills hills-front"></div>
+
+  <main class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-row">
+          <span class="brand-badge">口算小冒险</span>
+          <button id="recordToggleBtn" class="brand-icon-btn" type="button" aria-label="查看成长记录">
+            <svg viewBox="0 0 24 24" aria-hidden="true" class="brand-icon-svg">
+              <path d="M7 4h10v3a4 4 0 0 1-4 4h-2A4 4 0 0 1 7 7V4Z" fill="currentColor"/>
+              <path d="M9 12h6v3H9z" fill="currentColor"/>
+              <path d="M8 17h8v3H8z" fill="currentColor"/>
+              <path d="M5 5h2v2a3 3 0 0 1-2 2V5Zm12 0h2v4a3 3 0 0 1-2-2V5Z" fill="currentColor"/>
+            </svg>
+          </button>
+        </div>
+        <p>和数字小伙伴一起闯关吧</p>
+      </div>
+      <div class="audio-cluster">
+        <button id="muteToggle" class="mute-icon-btn" type="button" aria-pressed="false" aria-label="开启或关闭声音">🔇</button>
+        <label class="sound-picker compact">
+          <select id="soundThemeSelect" name="soundTheme" aria-label="选择音效主题"></select>
+        </label>
+      </div>
+    </header>
+
+    <section id="setupScreen" class="panel active">
+      <div class="panel-copy">
+        <h1>准备出发</h1>
+        <p>选好年级和题量，挑一个闯关方式就能出发。</p>
+      </div>
+
+      <form id="setupForm" class="setup-grid">
+        <div class="field">
+          <span>选择年级</span>
+          <div id="gradeButtonGrid" class="grade-button-grid"></div>
+          <input id="gradeSelect" name="grade" type="hidden" value="1">
+        </div>
+
+        <div class="field count-field">
+          <span>题目数量</span>
+          <div class="count-preset-row">
+            <button type="button" class="preset-btn count-preset-btn" data-count-value="10">10</button>
+            <button type="button" class="preset-btn count-preset-btn" data-count-value="20">20</button>
+            <button type="button" class="preset-btn count-preset-btn" data-count-value="30">30</button>
+            <button type="button" class="preset-btn count-preset-btn" data-count-value="50">50</button>
+            <button type="button" class="preset-btn count-preset-btn" data-count-value="100">100</button>
+          </div>
+          <input id="countInput" name="count" type="text" inputmode="numeric" value="20">
+          <small>支持 1-1000 题自由输入，也可以点上方按钮快速填写</small>
+        </div>
+
+        <input id="modeInput" name="mode" type="hidden" value="single">
+
+        <div class="mode-launch">
+          <button id="singleModeBtn" class="start-btn mode-launch-btn" type="button">单题闯关</button>
+          <button id="multiModeBtn" class="start-btn mode-launch-btn mode-secondary-btn" type="button">多题闯关</button>
+        </div>
+      </form>
+
+      <section id="previewScreen" class="preview-screen hidden">
+        <div class="summary-card" id="summaryCard" aria-live="polite"></div>
+        <div class="preview-actions">
+          <button id="previewBackBtn" class="ghost-btn" type="button">返回修改</button>
+          <button id="confirmStartBtn" class="start-btn" type="button">确认开始</button>
+        </div>
+      </section>
+
+    </section>
+
+    <section id="gameScreen" class="panel">
+      <div class="game-header">
+        <div class="pill-group">
+          <span class="pill" id="gradePill"></span>
+          <span class="pill" id="modePill"></span>
+          <span class="pill" id="pagePill"></span>
+        </div>
+        <div class="timer-card">
+          <span>剩余时间</span>
+          <strong id="timerText">00:00</strong>
+        </div>
+      </div>
+
+      <div id="countdownOverlay" class="countdown-overlay hidden">
+        <div class="countdown-bubble">
+          <p>预备</p>
+          <strong id="countdownText">3</strong>
+        </div>
+      </div>
+
+      <div id="questionWrap" class="question-wrap">
+        <div id="questionList" class="question-list"></div>
+      </div>
+
+      <section class="kid-keypad">
+        <div class="kid-keypad-header">
+          <strong>小朋友键盘</strong>
+          <span>点一点也能快速作答</span>
+        </div>
+        <div class="keypad-grid">
+          <button type="button" class="keypad-btn" data-keypad-value="7">7</button>
+          <button type="button" class="keypad-btn" data-keypad-value="8">8</button>
+          <button type="button" class="keypad-btn" data-keypad-value="9">9</button>
+          <button type="button" class="keypad-btn keypad-action keypad-tall" data-keypad-action="clear">清空</button>
+
+          <button type="button" class="keypad-btn" data-keypad-value="4">4</button>
+          <button type="button" class="keypad-btn" data-keypad-value="5">5</button>
+          <button type="button" class="keypad-btn" data-keypad-value="6">6</button>
+
+          <button type="button" class="keypad-btn" data-keypad-value="1">1</button>
+          <button type="button" class="keypad-btn" data-keypad-value="2">2</button>
+          <button type="button" class="keypad-btn" data-keypad-value="3">3</button>
+          <button type="button" class="keypad-btn keypad-action keypad-enter keypad-tall" data-keypad-action="enter">确定</button>
+
+          <button type="button" class="keypad-btn" data-keypad-value="0">0</button>
+          <button type="button" class="keypad-btn" data-keypad-value=".">.</button>
+          <button type="button" class="keypad-btn" data-keypad-value="...">...</button>
+        </div>
+      </section>
+
+      <div class="pager">
+        <button id="prevPageBtn" class="nav-btn" type="button">上一页</button>
+        <div class="pager-tip" id="pagerTip"></div>
+        <button id="nextPageBtn" class="nav-btn" type="button">下一页</button>
+      </div>
+    </section>
+
+    <section id="resultScreen" class="panel">
+      <div class="result-hero">
+        <h2 id="resultTitle">闯关完成</h2>
+        <p id="resultSubtitle"></p>
+        <div class="score-badge">
+          <span>得分</span>
+          <strong id="scoreText">0</strong>
+        </div>
+      </div>
+
+      <div class="result-actions">
+        <button id="detailToggleBtn" class="ghost-btn" type="button">查看得分详情</button>
+        <button id="restartBtn" class="start-btn" type="button">再来一局</button>
+      </div>
+
+      <div id="detailPanel" class="detail-panel hidden">
+        <div class="detail-summary" id="detailSummary"></div>
+        <div id="detailList" class="detail-list"></div>
+      </div>
+    </section>
+
+    <section id="recordsOverlay" class="records-overlay hidden">
+      <div class="records-card" id="progressCard">
+        <div class="progress-header">
+          <strong>成长记录</strong>
+          <button id="recordsCloseBtn" class="records-close-btn" type="button" aria-label="关闭成长记录">
+            <svg viewBox="0 0 24 24" aria-hidden="true" class="close-icon-svg">
+              <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+        <div class="progress-columns">
+          <div>
+            <div class="mini-title">最高分榜</div>
+            <ul id="highScoreList" class="mini-list"></ul>
+          </div>
+          <div id="wrongBookPanel" class="wrong-book-panel">
+            <div class="mini-title">最近错题</div>
+            <ul id="wrongBookList" class="mini-list"></ul>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="./app.js"></script>
+</body>
+</html>
