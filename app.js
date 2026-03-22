@@ -679,6 +679,7 @@ function handleInputKeydown(event, inputs, localIndex) {
   }
 
   if (event.target.hasAttribute("readonly") && handleReadonlyInputKeydown(event)) {
+    event.stopPropagation();
     return;
   }
 
@@ -709,6 +710,10 @@ function handleInputKeydown(event, inputs, localIndex) {
 
 function handleGlobalKeydown(event) {
   if (!elements.gameScreen.classList.contains("active") || !appState.started) {
+    return;
+  }
+
+  if (event.defaultPrevented) {
     return;
   }
 
@@ -763,6 +768,28 @@ function handleReadonlyInputKeydown(event) {
   if (event.key === "Enter") {
     event.preventDefault();
     goToNextUnansweredOrFinish(Number(activeInput.dataset.index));
+    provideButtonFeedback();
+    return true;
+  }
+
+  if (["ArrowLeft", "ArrowUp"].includes(event.key)) {
+    event.preventDefault();
+    if (appState.mode === "single") {
+      goToSingleQuestion(-1);
+    } else {
+      focusInputByAbsoluteIndex(Number(activeInput.dataset.index) - 1);
+    }
+    provideButtonFeedback();
+    return true;
+  }
+
+  if (["ArrowRight", "ArrowDown"].includes(event.key)) {
+    event.preventDefault();
+    if (appState.mode === "single") {
+      goToNextUnansweredOrFinish(Number(activeInput.dataset.index));
+    } else {
+      focusInputByAbsoluteIndex(Number(activeInput.dataset.index) + 1);
+    }
     provideButtonFeedback();
     return true;
   }
