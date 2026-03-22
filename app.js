@@ -212,6 +212,7 @@ function bindEvents() {
   document.querySelectorAll(".keypad-btn").forEach((button) => {
     button.addEventListener("click", () => handleKeypadClick(button));
   });
+  document.addEventListener("click", handleButtonFeedback);
   document.addEventListener("keydown", handleGlobalKeydown);
   document.addEventListener("fullscreenchange", updateFullscreenButton);
   elements.questionWrap.addEventListener("touchstart", handleTouchStart, { passive: true });
@@ -1046,6 +1047,21 @@ function restartGame() {
   showSetupArea("form");
 }
 
+function handleButtonFeedback(event) {
+  const button = event.target.closest("button");
+  if (!button || button.disabled || button.classList.contains("hidden")) {
+    return;
+  }
+  provideButtonFeedback();
+}
+
+function provideButtonFeedback() {
+  if ("vibrate" in navigator) {
+    navigator.vibrate(10);
+  }
+  playEffect("tap");
+}
+
 function toggleMute() {
   appState.muted = !appState.muted;
   updateMuteButton();
@@ -1123,10 +1139,12 @@ function playEffect(type) {
       ? theme.finish
       : type === "urgent"
         ? [theme.beep[0], theme.beep[0] * 1.12]
+        : type === "tap"
+          ? [theme.page[0] ?? theme.beep[0]]
         : theme.beep;
   sequence.forEach((frequency, index) => {
-    const duration = type === "finish" ? 0.18 : type === "urgent" ? 0.07 : 0.1;
-    const peak = type === "urgent" ? 0.24 : 0.18;
+    const duration = type === "finish" ? 0.18 : type === "urgent" ? 0.07 : type === "tap" ? 0.045 : 0.1;
+    const peak = type === "urgent" ? 0.24 : type === "tap" ? 0.06 : 0.18;
     playTone(frequency, duration, now + index * 0.08, theme.effectWave, appState.effectGain, peak);
   });
 }

@@ -863,6 +863,14 @@ select:focus-visible {
     padding: 18px 14px 32px;
   }
 
+  #fullscreenToggle:not(.hidden) {
+    position: fixed;
+    top: calc(env(safe-area-inset-top, 0px) + 14px);
+    right: 14px;
+    z-index: 40;
+    box-shadow: 0 12px 28px rgba(42, 74, 118, 0.18);
+  }
+
   .topbar .brand p,
   #setupScreen .panel-copy p {
     display: none;
