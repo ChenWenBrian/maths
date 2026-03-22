@@ -67,6 +67,10 @@ const swipeState = {
   tracking: false,
 };
 
+const deviceState = {
+  fullscreenRequested: false,
+};
+
 const elements = {
   setupForm: document.querySelector("#setupForm"),
   setupScreen: document.querySelector("#setupScreen"),
@@ -89,6 +93,7 @@ const elements = {
   recordsCloseBtn: document.querySelector("#recordsCloseBtn"),
   progressCard: document.querySelector("#progressCard"),
   summaryCard: document.querySelector("#summaryCard"),
+  fullscreenToggle: document.querySelector("#fullscreenToggle"),
   muteToggle: document.querySelector("#muteToggle"),
   gradePill: document.querySelector("#gradePill"),
   modePill: document.querySelector("#modePill"),
@@ -125,6 +130,7 @@ function init() {
   renderProgressCard();
   bindEvents();
   updateMuteButton();
+  updateFullscreenButton();
 }
 
 function safeParse(value, fallback) {
@@ -201,11 +207,13 @@ function bindEvents() {
   elements.nextPageBtn.addEventListener("click", () => turnPage(1));
   elements.restartBtn.addEventListener("click", restartGame);
   elements.detailToggleBtn.addEventListener("click", toggleDetailPanel);
+  elements.fullscreenToggle.addEventListener("click", toggleFullscreen);
   elements.muteToggle.addEventListener("click", toggleMute);
   document.querySelectorAll(".keypad-btn").forEach((button) => {
     button.addEventListener("click", () => handleKeypadClick(button));
   });
   document.addEventListener("keydown", handleGlobalKeydown);
+  document.addEventListener("fullscreenchange", updateFullscreenButton);
   elements.questionWrap.addEventListener("touchstart", handleTouchStart, { passive: true });
   elements.questionWrap.addEventListener("touchend", handleTouchEnd, { passive: true });
 }
@@ -310,6 +318,7 @@ function handleStartConfirm() {
     ensureAudio();
     startMusicLoop();
   }
+  requestFullscreenForGame();
   closeRecordsOverlay();
   prepareGame();
   showScreen("game");
@@ -471,6 +480,9 @@ function showScreen(screen) {
   elements.setupScreen.classList.toggle("active", screen === "setup");
   elements.gameScreen.classList.toggle("active", screen === "game");
   elements.resultScreen.classList.toggle("active", screen === "result");
+  const showFullscreen = screen === "game" && isMobilePortrait();
+  elements.fullscreenToggle.classList.toggle("hidden", !showFullscreen);
+  updateFullscreenButton();
 }
 
 function startCountdown() {
@@ -517,6 +529,7 @@ function updateTimerText() {
 function renderPage() {
   updateMetaBar();
   const singleMode = appState.mode === "single";
+  const mobileKeyboardMode = singleMode && isMobilePortrait();
   elements.questionWrap.classList.toggle("single-mode", singleMode);
   elements.questionWrap.classList.toggle("multi-mode", !singleMode);
   elements.kidKeypad.classList.toggle("hidden", !singleMode);
@@ -553,7 +566,7 @@ function renderPage() {
           <div class="question-no">第 ${absoluteIndex + 1} 题</div>
           <label class="question-text" for="answer-${absoluteIndex}">${question.text}</label>
         </div>
-        <input id="answer-${absoluteIndex}" class="answer-input" type="text" inputmode="decimal" data-index="${absoluteIndex}" value="${appState.answers[absoluteIndex]}" autocomplete="off" placeholder="${placeholder}">
+        <input id="answer-${absoluteIndex}" class="answer-input${mobileKeyboardMode ? " custom-keypad-input" : ""}" type="text" inputmode="${mobileKeyboardMode ? "none" : "decimal"}" ${mobileKeyboardMode ? 'readonly virtualkeyboardpolicy="manual"' : ""} data-index="${absoluteIndex}" value="${appState.answers[absoluteIndex]}" autocomplete="off" placeholder="${placeholder}">
       </article>
     `;
   }).join("");
@@ -581,6 +594,12 @@ function bindAnswerInputs() {
     input.addEventListener("input", (event) => {
       updateAnswerFromInput(event.target);
     });
+    if (input.hasAttribute("readonly")) {
+      input.addEventListener("pointerdown", (event) => {
+        event.preventDefault();
+        focusInput(event.currentTarget);
+      });
+    }
     input.addEventListener("focus", (event) => {
       const index = Number(event.target.dataset.index);
       highlightCard(index);
@@ -1145,6 +1164,73 @@ function randomInt(min, max) {
 
 function randomChoice(values) {
   return values[Math.floor(Math.random() * values.length)];
+}
+
+function updateMetaBar() {
+  elements.gradePill.textContent = `${appState.grade}年级`;
+  elements.modePill.textContent = appState.mode === "single" ? "单题模式" : "多题长列表";
+  elements.pagePill.textContent = appState.mode === "single"
+    ? `第 ${appState.currentPage + 1}/${getTotalPages()} 题`
+    : `共 ${appState.questions.length} 题`;
+  elements.pagerTip.textContent = appState.mode === "single"
+    ? "回车或继续下一题时，会优先跳到还没填写的题目。Page Up / Page Down 也可以翻页。"
+    : "Tab / Enter 去下一题，Shift+Tab 去上一题，方向键切换题目，Page Up / Page Down 跳 10 题。";
+}
+
+function focusInput(target) {
+  target.focus({ preventScroll: true });
+  if (!target.hasAttribute("readonly")) {
+    target.select();
+  }
+  const index = Number(target.dataset.index);
+  appState.currentFocusIndex = index;
+  highlightCard(index);
+  scrollCardIntoView(index);
+}
+
+function isMobilePortrait() {
+  return window.matchMedia("(max-width: 820px) and (orientation: portrait)").matches;
+}
+
+async function requestFullscreenForGame() {
+  if (!isMobilePortrait() || document.fullscreenElement || deviceState.fullscreenRequested) {
+    updateFullscreenButton();
+    return;
+  }
+  const target = document.documentElement;
+  if (!target.requestFullscreen) {
+    updateFullscreenButton();
+    return;
+  }
+  deviceState.fullscreenRequested = true;
+  try {
+    await target.requestFullscreen();
+  } catch {
+    deviceState.fullscreenRequested = false;
+  }
+  updateFullscreenButton();
+}
+
+async function toggleFullscreen() {
+  if (document.fullscreenElement) {
+    if (document.exitFullscreen) {
+      await document.exitFullscreen();
+    }
+  } else {
+    deviceState.fullscreenRequested = false;
+    await requestFullscreenForGame();
+  }
+  updateFullscreenButton();
+}
+
+function updateFullscreenButton() {
+  if (!elements.fullscreenToggle) {
+    return;
+  }
+  const isFullscreen = Boolean(document.fullscreenElement);
+  elements.fullscreenToggle.textContent = isFullscreen ? "✕" : "⛶";
+  elements.fullscreenToggle.setAttribute("aria-pressed", String(isFullscreen));
+  elements.fullscreenToggle.setAttribute("aria-label", isFullscreen ? "退出全屏" : "进入全屏");
 }
 
 init();
