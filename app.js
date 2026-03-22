@@ -125,6 +125,7 @@ function init() {
   renderGradeOptions();
   renderSoundThemeOptions();
   restoreSetupState();
+  applyPlatformMode();
   showSetupArea("form");
   syncSetupSummary();
   renderProgressCard();
@@ -215,6 +216,7 @@ function bindEvents() {
   document.addEventListener("click", handleButtonFeedback);
   document.addEventListener("keydown", handleGlobalKeydown);
   document.addEventListener("fullscreenchange", updateFullscreenButton);
+  window.addEventListener("resize", handleViewportChange);
   elements.questionWrap.addEventListener("touchstart", handleTouchStart, { passive: true });
   elements.questionWrap.addEventListener("touchend", handleTouchEnd, { passive: true });
 }
@@ -237,7 +239,7 @@ function syncSetupSummary() {
   const formData = new FormData(elements.setupForm);
   const grade = Number(formData.get("grade") || 1);
   const count = getSelectedCount();
-  const mode = elements.modeInput.value || "single";
+  const mode = isMobileDevice() ? "single" : (elements.modeInput.value || "single");
   const soundTheme = elements.soundThemeSelect.value || appState.soundTheme;
   const timeLimit = estimateTimeLimit(grade, count, mode);
   const gradeMeta = getGradeMeta(grade);
@@ -274,7 +276,7 @@ function syncSetupSummary() {
 }
 
 function openPreview(mode) {
-  elements.modeInput.value = mode;
+  elements.modeInput.value = isMobileDevice() ? "single" : mode;
   syncSetupSummary();
   showSetupArea("preview");
 }
@@ -481,7 +483,7 @@ function showScreen(screen) {
   elements.setupScreen.classList.toggle("active", screen === "setup");
   elements.gameScreen.classList.toggle("active", screen === "game");
   elements.resultScreen.classList.toggle("active", screen === "result");
-  const showFullscreen = screen === "game" && isMobilePortrait();
+  const showFullscreen = screen === "game" && isMobileDevice();
   elements.fullscreenToggle.classList.toggle("hidden", !showFullscreen);
   updateFullscreenButton();
 }
@@ -530,7 +532,7 @@ function updateTimerText() {
 function renderPage() {
   updateMetaBar();
   const singleMode = appState.mode === "single";
-  const mobileKeyboardMode = singleMode && isMobilePortrait();
+  const mobileKeyboardMode = isMobileDevice();
   elements.questionWrap.classList.toggle("single-mode", singleMode);
   elements.questionWrap.classList.toggle("multi-mode", !singleMode);
   elements.kidKeypad.classList.toggle("hidden", !singleMode);
@@ -1210,8 +1212,31 @@ function isMobilePortrait() {
   return window.matchMedia("(max-width: 820px) and (orientation: portrait)").matches;
 }
 
+function isMobileDevice() {
+  return window.matchMedia("(pointer: coarse), (max-width: 1024px)").matches;
+}
+
+function applyPlatformMode() {
+  const mobile = isMobileDevice();
+  elements.multiModeBtn.classList.toggle("hidden", mobile);
+  elements.multiModeBtn.disabled = mobile;
+  if (mobile) {
+    elements.modeInput.value = "single";
+  }
+}
+
+function handleViewportChange() {
+  applyPlatformMode();
+  if (elements.gameScreen.classList.contains("active")) {
+    showScreen("game");
+    renderPage();
+  } else {
+    syncSetupSummary();
+  }
+}
+
 async function requestFullscreenForGame() {
-  if (!isMobilePortrait() || document.fullscreenElement || deviceState.fullscreenRequested) {
+  if (!isMobileDevice() || document.fullscreenElement || deviceState.fullscreenRequested) {
     updateFullscreenButton();
     return;
   }
