@@ -678,6 +678,10 @@ function handleInputKeydown(event, inputs, localIndex) {
     return;
   }
 
+  if (event.target.hasAttribute("readonly") && handleReadonlyInputKeydown(event)) {
+    return;
+  }
+
   if (event.key === "Enter") {
     event.preventDefault();
     const currentIndex = Number(event.target.dataset.index);
@@ -708,6 +712,10 @@ function handleGlobalKeydown(event) {
     return;
   }
 
+  if (handleReadonlyInputKeydown(event)) {
+    return;
+  }
+
   if (event.key === "PageDown") {
     event.preventDefault();
     if (appState.mode === "single") {
@@ -724,6 +732,42 @@ function handleGlobalKeydown(event) {
       focusInputByAbsoluteIndex((appState.currentFocusIndex ?? 0) - 10);
     }
   }
+}
+
+function handleReadonlyInputKeydown(event) {
+  const activeInput = getActiveAnswerInput();
+  if (!activeInput || !activeInput.hasAttribute("readonly")) {
+    return false;
+  }
+
+  if (/^[0-9]$/.test(event.key)) {
+    event.preventDefault();
+    appendValueToInput(activeInput, event.key);
+    return true;
+  }
+
+  if (event.key === "." || event.key === "Decimal") {
+    event.preventDefault();
+    appendValueToInput(activeInput, ".");
+    return true;
+  }
+
+  if (event.key === "Backspace" || event.key === "Delete") {
+    event.preventDefault();
+    activeInput.value = activeInput.value.slice(0, -1);
+    updateAnswerFromInput(activeInput);
+    provideButtonFeedback();
+    return true;
+  }
+
+  if (event.key === "Enter") {
+    event.preventDefault();
+    goToNextUnansweredOrFinish(Number(activeInput.dataset.index));
+    provideButtonFeedback();
+    return true;
+  }
+
+  return false;
 }
 
 function turnPage(direction, position = "first") {
@@ -777,9 +821,7 @@ function focusInput(target) {
 }
 
 function handleKeypadClick(button) {
-  const activeInput = document.activeElement?.classList?.contains("answer-input")
-    ? document.activeElement
-    : document.querySelector(".question-card.active .answer-input") || document.querySelector(".answer-input");
+  const activeInput = getActiveAnswerInput();
 
   if (!activeInput) {
     return;
@@ -799,15 +841,27 @@ function handleKeypadClick(button) {
   }
 
   const value = button.dataset.keypadValue;
+  appendValueToInput(activeInput, value);
+  activeInput.focus();
+}
+
+function appendValueToInput(activeInput, value) {
   if (value === "..." && activeInput.value.includes("...")) {
-    return;
+    return false;
   }
   if (value === "." && activeInput.value.includes(".") && !activeInput.value.includes("...")) {
-    return;
+    return false;
   }
   activeInput.value += value;
   updateAnswerFromInput(activeInput);
-  activeInput.focus();
+  return true;
+}
+
+function getActiveAnswerInput() {
+  if (document.activeElement?.classList?.contains("answer-input")) {
+    return document.activeElement;
+  }
+  return document.querySelector(".question-card.active .answer-input") || document.querySelector(".answer-input");
 }
 
 function handleTouchStart(event) {
@@ -1218,8 +1272,8 @@ function isMobileDevice() {
 
 function applyPlatformMode() {
   const mobile = isMobileDevice();
-  elements.multiModeBtn.classList.toggle("hidden", mobile);
   elements.multiModeBtn.disabled = mobile;
+  elements.multiModeBtn.setAttribute("aria-disabled", String(mobile));
   if (mobile) {
     elements.modeInput.value = "single";
   }

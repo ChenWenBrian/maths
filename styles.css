@@ -394,6 +394,14 @@ select:focus-visible {
   box-shadow: 0 14px 24px rgba(245, 93, 62, 0.22);
 }
 
+.mode-launch-btn:disabled {
+  background: linear-gradient(135deg, rgba(230, 236, 245, 0.95), rgba(244, 247, 252, 0.95));
+  color: #93a1b5;
+  box-shadow: none;
+  cursor: not-allowed;
+  opacity: 1;
+}
+
 .preview-screen {
   display: grid;
   gap: 18px;
